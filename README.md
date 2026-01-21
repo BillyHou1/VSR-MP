@@ -1,83 +1,92 @@
-# DiffAVSE
-
-Audio-Visual Speech Enhancement using Diffusion Models.
-
+# LiteAVSE
+Low Latency and Lightweight Methods for Realistic Noise Suppression.
 University of Bristol EEME30003 Major Project, 2025-26.
 
 ## Changelog
-
-`2026-01-13`: Project direction confirmed: diffusion-based AVSE
-
-`2026-01-10`: Repository initialized
+`2026-01-21`: Repository renamed to `LiteAVSE`. Focus shifted to lightweight, low-latency architectures for real-world deployment.  
+`2026-01-13`: Project direction confirmed AVSE.  
+`2026-01-10`: Repository initialized.  
 
 ## Overview
+We study audio-visual speech enhancement using diffusion-based and flow-based generative models, and compare their performance under a unified experimental setup.
 
-This project explores using lip visual information to guide diffusion-based speech enhancement. The idea is that lip movements are immune to acoustic noise, so they can help recover cleaner speech in noisy conditions.
+The core hypothesis is that lip movements, being immune to acoustic noise, can guide the enhancement process even in extreme low-SNR conditions. We aim to investigate which generative paradigm (diffusion vs. flow matching) offers a better trade-off between quality and efficiency.
 
-This repository builds on two existing codebases:
-- [SGMSE](https://github.com/sp-uhh/sgmse) - Diffusion-based speech enhancement
-- [Auto-AVSR](https://github.com/mpc001/auto_avsr) - Visual speech recognition (we use the visual encoder)
+We plan to explore two generative paradigms:
+1. **Diffusion-based:** Audio-Visual Diffusion with U-Net (based on SGMSE+).
+2. **Flow-based:** Audio-Visual Flow Matching, potentially adopting DiT backbone (inspired by FlowAVSE & VoiceDiT).
 
-Our contribution is adding visual conditioning to the diffusion score network.
+We also aim to develop a lightweight application prototype to demonstrate the final system.
 
 ```
 Input:  Noisy Audio + Lip Video
+                |
+        Generative Model
+       /                \
+  Diffusion            Flow Matching
+  (SGMSE+)          (FlowAVSE/VoiceDiT)
+       \                /
+                |
 Output: Enhanced Audio
 ```
 
 ## Status
+Current focus:
+1. **Data:** Acquiring LRS3 dataset access from Oxford VGG.
+2. **Dev:** Implementing the `Visual Front-end` shared module.
+3. **Model:** Reproducing baselines under unified setup.
+4. **App:** Planning lightweight demo prototype.
 
-Current focus: reproduce SGMSE audio-only baseline and apply for LRS3 dataset access.
+## Repository Structure
+Code is organized by architecture:
+- `models/diffusion/`: Diffusion-based model (SGMSE+ backbone).
+- `models/flow/`: Flow Matching model (FlowAVSE/VoiceDiT backbone).
+- `models/visual_frontend/`: Shared lip-reading encoder (ResNet/Conformer).
+- `app/`: Lightweight application prototype (planned).
 
 ## Documentation
-
 - Team & timeline: see [`docs/PLAN.md`](docs/PLAN.md)
-- Weekly log: see [`docs/LOG.md`](docs/LOG.md)
-- Results: see [`docs/RESULTS.md`](docs/RESULTS.md)
+- Experiments Log: see [`docs/LOG.md`](docs/LOG.md)
+- Benchmark Results: see [`docs/RESULTS.md`](docs/RESULTS.md)
 
 ## Reproducibility
-
 All experiments must have:
-1. A config file under `configs/`
-2. A log under `experiments/`
+ A config file under `configs/` (e.g., `flow_lrs3.yaml`, `diff_lrs3.yaml`)
 
 ## References
 
 ### Core Papers
 
-| Paper | Venue | Year | Usage |
-|-------|-------|------|-------|
-| [SGMSE+](https://arxiv.org/abs/2208.05830) | TASLP | 2023 | Diffusion SE framework |
-| [Auto-AVSR](https://arxiv.org/abs/2303.14307) | ICASSP | 2023 | Visual encoder |
-| [RT-LA-VocE](https://arxiv.org/abs/2407.07825) | Interspeech | 2024 | Real-time AVSE reference |
+#### Diffusion-based
+| Paper | arXiv | Role in Project |
+|-------|-------|-----------------|
+| [SGMSE+](https://arxiv.org/abs/2208.05830) | 2208.05830 | Diffusion backbone & training framework. |
 
-### Additional Papers
+#### Flow-based
+| Paper | arXiv | Role in Project |
+|-------|-------|-----------------|
+| [FlowAVSE](https://arxiv.org/abs/2406.09286) | 2406.09286 | Flow Matching algorithm & loss function. |
+| [VoiceDiT](https://arxiv.org/abs/2412.19259) | 2412.19259 | Dual-Condition Transformer (DiT) architecture. |
 
-| Paper | Venue | Year |
-|-------|-------|------|
-| [VisualVoice](https://arxiv.org/abs/2101.03149) | CVPR | 2021 |
-| [Looking to Listen](https://arxiv.org/abs/1804.03619) | SIGGRAPH | 2018 |
-| [DAVSE](https://www.isca-archive.org/avsec_2024/chen24b_avsec.pdf) | AVSEC | 2024 |
+### Baseline References
 
-### Code
+| Paper | arXiv | Usage |
+|-------|-------|-------|
+| [VisualVoice](https://arxiv.org/abs/2101.03149) | 2101.03149 | Discriminative AVSE baseline. |
 
-| Repository | Description |
-|------------|-------------|
-| [SGMSE](https://github.com/sp-uhh/sgmse) | Diffusion-based speech enhancement |
-| [Auto-AVSR](https://github.com/mpc001/auto_avsr) | Audio-visual speech recognition |
-| [AVSE Challenge](https://github.com/cogmhear/avse_challenge) | COG-MHEAR baseline & evaluation |
+### Visual Front-end
+
+| Paper | Venue | Usage |
+|-------|-------|-------|
+| [Auto-AVSR](https://arxiv.org/abs/2303.14307) | ICASSP 2023 | Lip-reading Encoder (ResNet+Conformer) |
 
 ## Acknowledgements
+We acknowledge the open-source contributions from the authors of SGMSE, FlowAVSE, and VoiceDiT.
 
-- [SGMSE](https://github.com/sp-uhh/sgmse) by [Welker et al.](https://arxiv.org/abs/2208.05830)
-- [Auto-AVSR](https://github.com/mpc001/auto_avsr) by [Ma et al.](https://arxiv.org/abs/2303.14307)
-- [COG-MHEAR AVSE Challenge](https://challenge.cogmhear.org/) organizers
 ## License
-
 Code will be released under an open-source license (TBD). Upstream components retain their original licenses.
 
 ## Contact
-
 **Supervisor:** Dr. Fadi Karameh
 
-For questions, please open an issue.
+For questions or access, please open an issue.
