@@ -1,73 +1,78 @@
-# LiteAVSEMamba Configuration
-# Base config for full model (VCE + FSVG + Custom3D + CausalTFMamba)
-#
-# References:
-#   - SEMamba (Chao et al., SLT 2024) for base STFT and training config
-#   - Mamba (Gu & Dao, COLM 2024) for SSM hyperparameters
+# LiteAVSE Configuration
+# Lightweight Audio-Visual Speech Enhancement using Causal Mamba
 
-# ----- STFT Configuration -----
-# Ref: MP-SENet (Lu et al., 2023) power-compressed mag-phase
+# Environment Settings
+env_setting:
+  num_gpus: 1
+  num_workers: 4
+  seed: 1234
+  stdout_interval: 10
+  checkpoint_interval: 500
+  validation_interval: 500
+  summary_interval: 50
+  dist_cfg:
+    dist_backend: nccl
+    dist_url: tcp://localhost:19499
+    world_size: 1
+
+# Datapath Configuration
+data_cfg:
+  train_data_json: data/grid_train.json
+  valid_data_json: data/grid_valid.json
+  test_data_json: data/grid_test.json
+  train_noise_json: data/noise_demand.json
+  valid_noise_json: data/noise_demand.json
+
+# Training Configuration
+training_cfg:
+  training_epochs: 100
+  batch_size: 2
+  learning_rate: 0.0005
+  adam_b1: 0.8
+  adam_b2: 0.99
+  lr_decay: 0.99
+  segment_size: 16000    # 1 second segments at 16kHz
+  snr_range: [-5, 20]
+  use_discriminator: False
+  loss:
+    magnitude: 0.9
+    phase: 0.3
+    complex: 0.1
+    time: 0.2
+    consistancy: 0.1
+    si_sdr: 0.2
+  use_PCS400: False
+
+# STFT Configuration
 stft_cfg:
   sampling_rate: 16000
   n_fft: 400
   hop_size: 100
   win_size: 400
-  compress_factor: 0.3
 
-# ----- Model Configuration -----
+# Model Configuration
 model_cfg:
-  # Audio encoder/decoder (from SEMamba)
-  input_channel: 2          # mag + pha
-  hid_feature: 64           # hidden feature dimension
-  num_tfmamba: 4             # number of CausalTFMamba blocks
-
-  # Mamba SSM config (Ref: Mamba, Gu & Dao, 2024)
+  hid_feature: 64
+  compress_factor: 0.3
+  num_tfmamba: 4
   d_state: 16
   d_conv: 4
   expand: 4
   norm_epsilon: 0.00001
+  beta: 2.0
+  input_channel: 2   # Audio only, visual fuses in feature space via VCE+FSVG
+  output_channel: 1
 
-  # Visual encoder
-  visual_encoder: "custom3d"  # Options: "custom3d"
-  visual_out_channels: 64     # match hid_feature
-
-  # VCE config
-  vce_input_dim: 512
-  vce_hidden_dims: [256, 64]
-  vce_smooth_kernel: 5
-
-  # FSVG config
-  fsvg_prior: true            # enable speech-band prior
-  fsvg_speech_low: 300        # Hz, lower bound of speech band
-  fsvg_speech_high: 3000      # Hz, upper bound of speech band
-
-# ----- Training Configuration -----
-# Ref: SEMamba (Chao et al., 2024) Section IV
-train_cfg:
-  batch_size: 2               # adjust based on GPU VRAM
-  num_epochs: 100
-  learning_rate: 0.0005       # 5e-4
-  betas: [0.8, 0.99]
-  lr_decay: 0.99              # ExponentialLR gamma
-  max_grad_norm: 1.0          # gradient clipping
-  validation_interval: 500    # validate every N steps
-
-  # Loss weights (6-component)
-  # Ref: MP-SENet for mag/phase/complex, SEMamba for time/consistency, SI-SDR new
-  loss_mag_weight: 0.9
-  loss_phase_weight: 0.3
-  loss_complex_weight: 0.1
-  loss_time_weight: 0.2
-  loss_consistency_weight: 0.1
-  loss_sisdr_weight: 0.2
-
-# ----- Data Configuration -----
-data_cfg:
-  train_json: "data/train.json"
-  valid_json: "data/valid.json"
-  noise_dir: "data/noise"
-  audio_length: 16000         # 1 second @ 16kHz
+# Visual Configuration
+visual_cfg:
+  use_visual: True
+  visual_channels: 1
+  freeze_visual_encoder: True
   video_fps: 25
-  video_size: 96              # face crop size
-  visual_augmentation: true   # enable visual aug for VCE training
-  num_workers: 4
+  face_size: 96
+
+# LiteAVSE-specific Configuration
+lite_cfg:
+  visual_encoder_type: mobilenet   # mobilenet EncoderA or custom3d EncoderB
+  n_freq_enc: 100                  # F_enc = (n_fft//2 + 1 - 3) / 2 + 1 = 100
+  use_lite_dense: False            # True = use depthwise separable conv in DenseBlock, smaller model

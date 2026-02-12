@@ -1,3 +1,4 @@
+# learnable sigmoid for magnitude mask output
 # Reference: https://github.com/yxlu-0102/MP-SENet/blob/main/utils.py
 
 import torch

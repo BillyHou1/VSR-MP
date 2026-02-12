@@ -1,53 +1,35 @@
-# Python
 __pycache__/
 *.py[cod]
 *.egg-info/
-dist/
-build/
-*.egg
-
-# Virtual environments
 venv/
-env/
 .venv/
 
-# IDE
 .vscode/
 .idea/
 *.swp
-*.swo
+.DS_Store
 
-# Experiment outputs
-exp/
-logs/
-runs/
-*.pth
-*.pt
-*.ckpt
-
-# Data (too large for git)
-data/
-datasets/
-*.wav
-*.mp4
-*.avi
-*.flac
-
-# Mamba build artifacts
+# build artifacts
 mamba-1_2_0_post1/
 mamba_install/
+dist/
+build/
 
-# Pretrained models
+# data & models (too big)
+data/
+*.wav
+*.mp4
+*.flac
+*.pth
+*.pt
+
+# experiment outputs
+exp/
 ckpts/
+runs/
+logs/
 EnhancedSamples/
 
-# OS
-.DS_Store
-Thumbs.db
-
-# Jupyter
 .ipynb_checkpoints/
-
-# Misc
 *.log
 *.tmp

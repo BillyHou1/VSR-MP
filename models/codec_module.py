@@ -1,3 +1,4 @@
+# audio encoder/decoder from MP-SENet (DenseEncoder, MagDecoder, PhaseDecoder)
 # Reference: https://github.com/yxlu-0102/MP-SENet/blob/main/models/generator.py
 
 import torch

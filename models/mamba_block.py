@@ -1,3 +1,10 @@
+# Dominic + Zhenning
+# TODO:
+# 1. fix imports for mamba-ssm 2.3.0 (Block, RMSNorm paths changed; Block() needs mlp_cls)
+# 2. add bidirectional param to MambaBlock (for forward-only mode)
+# 3. add _get_mixer_cls() to switch Mamba-1/Mamba-2 via config
+# 4. add CausalTFMambaBlock class (time: causal, freq: bidirectional)
+
 # Reference: https://github.com/state-spaces/mamba/blob/9127d1f47f367f5c9cc49c73ad73557089d02cb8/mamba_ssm/models/mixer_seq_simple.py
 
 import torch
@@ -14,7 +21,7 @@ from mamba_ssm.ops.triton.layernorm import RMSNorm
 
 # github: https://github.com/state-spaces/mamba/blob/9127d1f47f367f5c9cc49c73ad73557089d02cb8/mamba_ssm/models/mixer_seq_simple.py
 def create_block(
-    d_model, cfg, layer_idx=0, rms_norm=True, fused_add_norm=False, residual_in_fp32=False, 
+    d_model, cfg, layer_idx=0, rms_norm=True, fused_add_norm=False, residual_in_fp32=False,
     ):
     d_state = cfg['model_cfg']['d_state'] # 16
     d_conv = cfg['model_cfg']['d_conv'] # 4
@@ -68,7 +75,7 @@ class MambaBlock(nn.Module):
 class TFMambaBlock(nn.Module):
     """
     Temporal-Frequency Mamba block for sequence modeling.
-    
+
     Attributes:
     cfg (Config): Configuration for the block.
     time_mamba (MambaBlock): Mamba block for temporal dimension.
@@ -80,22 +87,22 @@ class TFMambaBlock(nn.Module):
         super(TFMambaBlock, self).__init__()
         self.cfg = cfg
         self.hid_feature = cfg['model_cfg']['hid_feature']
-        
+
         # Initialize Mamba blocks
         self.time_mamba = MambaBlock(in_channels=self.hid_feature, cfg=cfg)
         self.freq_mamba = MambaBlock(in_channels=self.hid_feature, cfg=cfg)
-        
+
         # Initialize ConvTranspose1d layers
         self.tlinear = nn.ConvTranspose1d(self.hid_feature * 2, self.hid_feature, 1, stride=1)
         self.flinear = nn.ConvTranspose1d(self.hid_feature * 2, self.hid_feature, 1, stride=1)
-    
+
     def forward(self, x):
         """
         Forward pass of the TFMamba block.
-        
+
         Parameters:
         x (Tensor): Input tensor with shape (batch, channels, time, freq).
-        
+
         Returns:
         Tensor: Output tensor after applying temporal and frequency Mamba blocks.
         """
@@ -107,4 +114,3 @@ class TFMambaBlock(nn.Module):
         x = self.flinear( self.freq_mamba(x).permute(0,2,1) ).permute(0,2,1) + x
         x = x.view(b, t, f, c).permute(0, 3, 1, 2)
         return x
-

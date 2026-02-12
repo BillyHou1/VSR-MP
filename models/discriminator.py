@@ -1,3 +1,4 @@
+# PESQ-guided discriminator, used in original SEMamba training only
 # References: https://github.com/yxlu-0102/MP-SENet/blob/main/models/discriminator.py
 
 import torch

@@ -1,3 +1,8 @@
+# Billy
+# TODO:
+# 1. add LiteAVSEMamba class: double-gated AV fusion (alpha * gate * visual_feat)
+# wire: VisualEncoder + VCE + FSVG + CausalTFMamba + Decoders
+
 import torch
 import torch.nn as nn
 from einops import rearrange
@@ -7,14 +12,14 @@ from .codec_module import DenseEncoder, MagDecoder, PhaseDecoder
 class SEMamba(nn.Module):
     """
     SEMamba model for speech enhancement using Mamba blocks.
-    
+
     This model uses a dense encoder, multiple Mamba blocks, and separate magnitude
     and phase decoders to process noisy magnitude and phase inputs.
     """
     def __init__(self, cfg):
         """
         Initialize the SEMamba model.
-        
+
         Args:
         - cfg: Configuration object containing model parameters.
         """
@@ -35,11 +40,11 @@ class SEMamba(nn.Module):
     def forward(self, noisy_mag, noisy_pha):
         """
         Forward pass for the SEMamba model.
-        
+
         Args:
         - noisy_mag (torch.Tensor): Noisy magnitude input tensor [B, F, T].
         - noisy_pha (torch.Tensor): Noisy phase input tensor [B, F, T].
-        
+
         Returns:
         - denoised_mag (torch.Tensor): Denoised magnitude tensor [B, F, T].
         - denoised_pha (torch.Tensor): Denoised phase tensor [B, F, T].
