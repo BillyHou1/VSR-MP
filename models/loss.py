@@ -1,4 +1,4 @@
-# Shunjie
+# Ronny + Shunjie
 # TODO:
 # 1. si_sdr_loss(ref, est): negative SI-SDR for training
 # 2. si_sdr_score(utts_r, utts_g): mean SI-SDR in dB for eval

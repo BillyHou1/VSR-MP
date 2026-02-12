@@ -1,7 +1,16 @@
 # Billy
 # TODO:
-# 1. add LiteAVSEMamba class: double-gated AV fusion (alpha * gate * visual_feat)
-# wire: VisualEncoder + VCE + FSVG + CausalTFMamba + Decoders
+# add LiteAVSEMamba class: double-gated AV fusion (alpha * gate * visual_feat)
+# VisualEncoder + VCE + FSVG + CausalTFMamba + Decoders
+#
+# module interfaces:
+#   DenseEncoder:   noisy [B,2,T,F] -> audio_feat [B,64,T,F_enc]
+#   VisualEncoder:  video [B,1,T,96,96] -> visual_feat [B,64,T]
+#   VCE:            visual_feat [B,64,T] -> alpha [B,1,T]
+#   FSVG:          audio_feat + visual_feat -> gate [B,1,T,F_enc]
+#   CausalTFMamba:  [B,64,T,F_enc] -> [B,64,T,F_enc]
+#   MagDecoder:     [B,64,T,F_enc] -> mag_mask [B,1,T,F]
+#   PhaseDecoder:   [B,64,T,F_enc] -> phase [B,1,T,F]
 
 import torch
 import torch.nn as nn
