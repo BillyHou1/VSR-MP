@@ -1,24 +1,17 @@
 # Billy
 # SEMamba below is the original audio-only model, already done.
-#
-# TODO add LiteAVSEMamba class below SEMamba
-# This is our version that adds visual info. Unlike just concatenating video to
-# the input, we fuse in feature space AFTER DenseEncoder so input_channel stays
-# 2 (mag + pha) not 3. Fusion is double gated:
-# fused = audio_feat + alpha * gate * visual_feat
-# alpha from VCE is per-frame confidence, basically is this video frame reliable,
-# gate from FSVG is per-frequency mask, does this freq band need visual help.
-# Uses CausalTFMambaBlock not TFMambaBlock cause we need causal for real-time.
-# When video=None just skip the visual branch entirely and run audio-only.
-# visual_proj is Conv1d(512, hid_feature, 1) + ReLU to match dimensions.
-# Remember to F.interpolate visual features and alpha to match encoded time dim
-# cause video is 25fps but audio encoding runs at a different rate.
+# LiteAVSEMamba is added at the bottom of this file.
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from einops import rearrange
-from .mamba_block import TFMambaBlock
+from .mamba_block import TFMambaBlock, CausalTFMambaBlock
 from .codec_module import DenseEncoder, MagDecoder, PhaseDecoder
+from .codec_module import LiteDenseEncoder, LiteMagDecoder, LitePhaseDecoder
+from .vce import VCE   # swap with VCEWithTemporalSmoothing if you want smoothing
+from .fsvg import FSVG  # swap with FSVGWithPrior if you want the freq prior
+from .lite_visual_encoder import LiteVisualEncoderA, LiteVisualEncoderB
 
 class SEMamba(nn.Module):
     """
@@ -86,3 +79,35 @@ class SEMamba(nn.Module):
         )
 
         return denoised_mag, denoised_pha, denoised_com
+
+
+# TODO LiteAVSEMamba
+# AV version of SEMamba. Fusion happens after DenseEncoder in feature space,
+# so input_channel stays 2 (mag+pha), same as SEMamba.
+# Visual gets modulated by alpha from VCE and gate from FSVG,
+# then added to audio features as a residual.
+# Uses CausalTFMambaBlock instead of TFMambaBlock.
+# When video=None just skip the visual branch entirely.
+# cfg['visual_cfg']['use_visual'] turns the visual branch on/off
+# cfg['lite_cfg']['visual_encoder_type'] picks EncoderA or EncoderB
+# cfg['lite_cfg']['n_freq_enc'] is the freq dim after DenseEncoder
+class LiteAVSEMamba(nn.Module):
+    def __init__(self, cfg):
+        super(LiteAVSEMamba, self).__init__()
+        self.cfg = cfg
+        # TODO audio backbone (refer to SEMamba above for the pattern)
+        # TODO visual branch: visual encoder, VCE, FSVG, and projection layers
+        raise NotImplementedError
+    def forward(self, noisy_mag, noisy_pha, video=None):
+        """
+        Args:
+            noisy_mag: [B, F, T]
+            noisy_pha: [B, F, T]
+            video:     [B, 3, Tv, 96, 96] or None for audio-only fallback
+        Returns:
+            denoised_mag, denoised_pha, denoised_com  (same shapes as SEMamba)
+
+        Flow: encode audio → fuse visual if available → CausalTFMamba → decode.
+        Handle the case where video is None (audio-only fallback).
+        """
+        raise NotImplementedError

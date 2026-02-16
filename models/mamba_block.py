@@ -1,23 +1,21 @@
-# Dominic + Zhenning
+# Zhenning work
 # What this file does:
-# This is where the actual denoising happens. Mamba scans along time and frequency
-# to clean up the audio spectrogram. Think of it like an RNN that goes through
-# the spectrogram row by row for time and column by column for frequency.
-#
+# This is where the actual denoising happens. Mamba scans along time and
+# frequency to clean up the audio spectrogram. Think of it like an RNN that
+# goes through the spectrogram row by row (time) and column by column (freq).
 # What you need to do:
-# 1.Fix the imports cause they break on mamba-ssm 2.3.0 and the whole thing won't run
-# 2.Let MambaBlock run forward-only, right now it always does forward+backward
-# 3.Add a helper so we can switch between Mamba1 and Mamba2 from config
-# 4.Add CausalTFMambaBlock — this is the main thing, it's what LiteAVSEMamba actually uses
-#
+# Fix the imports, they break on mamba-ssm 2.3.0 and nothing runs
+# Let MambaBlock run forward-only, right now it always does forward+backward
+# Add a helper so we can switch between Mamba1 and Mamba2 from config
+# Add CausalTFMambaBlock, this is the main one, LiteAVSEMamba uses it
 # Why CausalTFMambaBlock matters:
-# Real-time speech enhancement cannot look into the future. You cannot wait for
+# Real-time speech enhancement can't look into the future. You can't wait for
 # someone to finish talking before you start denoising. So the time dimension
-# has to be causal, meaning forward-only. But frequency is different — 100Hz and 4kHz
-# exist at the same time, there is no "future" in frequency — so frequency stays
+# has to be causal (forward-only). But frequency is different 100Hz and 4kHz
+# exist at the same instant, there's no "future" in frequency, so freq stays
 # bidirectional. This is one of the key differences from the original SEMamba.
-#
-# Recommended order: do 1 first, otherwise nothing runs, then 2 and 4 together, and 3 last.
+
+# Recommended order: do 1 first otherwise nothing runs, then 2 and 4, then 3 last.
 
 import torch
 import torch.nn as nn
@@ -27,23 +25,19 @@ from torch.nn.parameter import Parameter
 from functools import partial
 from einops import rearrange
 
-# TODO fix these three imports, they are mamba-ssm 1.x paths and will crash on 2.3.0
-# Block moved to mamba_ssm.modules.block
-# RMSNorm moved to mamba_ssm.ops.triton.layer_norm, layernorm -> layer_norm
-# also add this: from mamba_ssm.modules.mamba2 import Mamba2, you need it for the mixer switch
+# TODO fix imports for mamba-ssm >= 2.0
+# right now these work on 1.2.x (the bundled version in mamba-1_2_0_post1/)
+# but on 2.0+ Block moved to mamba_ssm.modules.block and
+# Mamba2 lives in mamba_ssm.modules.mamba2
+# use try/except so it works on both versions
 from mamba_ssm.modules.mamba_simple import Mamba, Block
 from mamba_ssm.models.mixer_seq_simple import _init_weights
 from mamba_ssm.ops.triton.layernorm import RMSNorm
 
 
-# TODO add _get_mixer_cls(cfg, layer_idx) function here before create_block
-# this reads cfg['model_cfg']['mamba_version'] which is either 'mamba' or 'mamba2'
-# and returns the right class wrapped in functools.partial
-# for 'mamba' as default use Mamba with d_state=16
-# for 'mamba2' use Mamba2 with d_state=64 has to be power of 2 and headdim=32
-# the point is so we can switch versions from the YAML config without touching code
-# not urgent, do this last, the model runs fine on Mamba1 without it
-# you can hardcode Mamba1 for now, just make sure to import Mamba2 at the top and add it to the mixer switch later when you do this
+# TODO _get_mixer_cls(cfg, layer_idx) helper
+# reads cfg['model_cfg']['mamba_version'] and returns the right class
+# so we can swap Mamba1/Mamba2 from YAML. Not urgent, Mamba1 works fine without this.
 
 
 def create_block(
@@ -54,12 +48,13 @@ def create_block(
     expand = cfg['model_cfg']['expand'] # 4
     norm_epsilon = cfg['model_cfg']['norm_epsilon'] # 0.00001
 
-    # TODO once you have _get_mixer_cls, replace this line with mixer_cls = _get_mixer_cls(cfg, layer_idx)
+    #TODO swap this with _get_mixer_cls(cfg, layer_idx) once you have it
     mixer_cls = partial(Mamba, layer_idx=layer_idx, d_state=d_state, d_conv=d_conv, expand=expand)
     norm_cls = partial(
         nn.LayerNorm if not rms_norm else RMSNorm, eps=norm_epsilon
     )
-    # TODO add mlp_cls=nn.Identity here, mamba-ssm 2.3.0 requires it or it crashes
+    #TODO on mamba-ssm 2.x you need mlp_cls=nn.Identity here
+    # 1.2.x doesn't accept that arg so don't add it if you're on the bundled version
     block = Block(
             d_model,
             mixer_cls,
@@ -71,15 +66,13 @@ def create_block(
     return block
 
 
-# TODO add a bidirectional parameter here, default True so nothing breaks
-# the problem right now is MambaBlock always does forward + backward and outputs [B, T, 2C]
-# but CausalTFMambaBlock needs forward-only which outputs [B, T, C]
-# so when bidirectional=False, skip the backward part entirely:
-#   in __init__ don't create backward_blocks at all (saves memory)
-#   in forward() skip the flip, skip backward_blocks, just return y_forward on its own
+# TODO the bidirectional param is in __init__ but forward() ignores it.
+# store it and use it: when False, skip the backward pass and return [B, T, C].
+# when True, keep current behaviour and return [B, T, 2C].
 class MambaBlock(nn.Module):
-    def __init__(self, in_channels, cfg):
+    def __init__(self, in_channels, cfg, bidirectional=True):
         super(MambaBlock, self).__init__()
+        # TODO store self.bidirectional
         n_layer = 1
         self.forward_blocks  = nn.ModuleList( create_block(in_channels, cfg) for i in range(n_layer) )
         self.backward_blocks = nn.ModuleList( create_block(in_channels, cfg) for i in range(n_layer) )
@@ -92,6 +85,7 @@ class MambaBlock(nn.Module):
         )
 
     def forward(self, x):
+        # TODO check self.bidirectional, skip backward pass if False
         x_forward, x_backward = x.clone(), torch.flip(x, [1])
         resi_forward, resi_backward = None, None
 
@@ -139,12 +133,19 @@ class TFMambaBlock(nn.Module):
         return x
 
 
-# TODO add CausalTFMambaBlock class here
-# this is the block that LiteAVSEMamba actually uses, generator.py imports it
-# it is almost identical to TFMambaBlock above, you can just copy it and change two things
-# 1.time_mamba uses bidirectional=False (causal cannot see future frames)
-#    freq_mamba uses bidirectional=True (frequency has no causality, same as before)
-# 2.because causal mamba outputs C instead of 2C, tlinear becomes C->C not 2C->C
-#    flinear stays 2C->C cause freq is still bidirectional
-#
-# the forward() logic is exactly the same as TFMambaBlock, nothing changes there input and output shape: [B, 64, T, F] -> [B, 64, T, F]
+# TODO CausalTFMambaBlock
+# Same idea as TFMambaBlock but time is causal (forward only), freq stays bidirectional.
+# Think about what dimensions change when time_mamba is no longer bidirectional.
+# in/out shape: [B, C, T, F]
+class CausalTFMambaBlock(nn.Module):
+    def __init__(self, cfg):
+        super(CausalTFMambaBlock, self).__init__()
+        self.cfg = cfg
+        self.hid_feature = cfg['model_cfg']['hid_feature']
+        # TODO time_mamba (causal) and freq_mamba (bidirectional)
+        # then tlinear and flinear with matching input dims
+        raise NotImplementedError
+
+    def forward(self, x):
+        # same reshape logic as TFMambaBlock.forward()
+        raise NotImplementedError

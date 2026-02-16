@@ -1,20 +1,8 @@
-# Dominic + Zhenning
+# Zhenning
 # DenseEncoder, MagDecoder, PhaseDecoder from MP-SENet are already done below.
 # Reference: https://github.com/yxlu-0102/MP-SENet/blob/main/models/generator.py
-#
-# TODO add Lite variants at the bottom
-# Replace standard Conv2d in DenseBlock with depthwise separable conv to cut
-# params, same idea as MobileNet. Structure stays the same, just lighter convs.
-#
-# DepthwiseSeparableConv2d, depthwise conv with groups=in_ch then pointwise 1x1,
-# add InstanceNorm2d + PReLU after pointwise same as DenseBlock does.
-# LiteDenseBlock, same as DenseBlock but uses DepthwiseSeparableConv2d instead
-# of nn.Conv2d. Concat skip pattern, depth=4, dilation=2^i all unchanged.
-# LiteDenseEncoder, same as DenseEncoder with LiteDenseBlock, keep the two
-# wrapper convs dense_conv_1 and dense_conv_2 as regular Conv2d.
-# LiteMagDecoder and LitePhaseDecoder, same deal just swap the DenseBlock.
-#
-# Used when cfg['lite_cfg']['use_lite_dense'] is True, otherwise original classes.
+# Lite variants are at the bottom, Zhenning's job.
+# Use them when cfg['lite_cfg']['use_lite_dense'] is True.
 
 import torch
 import torch.nn as nn
@@ -184,10 +172,10 @@ class PhaseDecoder(nn.Module):
     def forward(self, x):
         """
         Forward pass for the PhaseDecoder module.
-        
+
         Args:
         - x (torch.Tensor): Input tensor.
-        
+
         Returns:
         - torch.Tensor: Decoded tensor with phase information.
         """
@@ -197,3 +185,77 @@ class PhaseDecoder(nn.Module):
         x_i = self.phase_conv_i(x)
         x = torch.atan2(x_i, x_r)
         return x
+
+
+# Lite variants - Zhenning
+# Same structure as above but swap Conv2d for depthwise separable conv to cut params.
+# Look up depthwise separable convolution if you haven't seen it,
+# the key is the groups param in nn.Conv2d.
+# Used when cfg['lite_cfg']['use_lite_dense'] is True.
+
+class DepthwiseSeparableConv2d(nn.Module):
+    """
+    Drop-in replacement for nn.Conv2d using depthwise separable convolution.
+    Same interface as nn.Conv2d (in_channels, out_channels, kernel_size, ...).
+    """
+    def __init__(self, in_channels, out_channels, kernel_size, stride=1,
+                 padding=0, dilation=1, bias=True):
+        super().__init__()
+        # TODO depthwise separable conv, same args as nn.Conv2d
+        raise NotImplementedError
+
+    def forward(self, x):
+        raise NotImplementedError
+
+
+class LiteDenseBlock(nn.Module):
+    """
+    Same structure as DenseBlock but uses DepthwiseSeparableConv2d
+    instead of nn.Conv2d. Everything else (norm, activation, skip connections)
+    stays the same.
+    """
+    def __init__(self, cfg, kernel_size=(3, 3), depth=4):
+        super().__init__()
+        self.depth = depth
+        # TODO same as DenseBlock but use DepthwiseSeparableConv2d
+        raise NotImplementedError
+
+    def forward(self, x):
+        """Same forward logic as DenseBlock."""
+        raise NotImplementedError
+
+
+class LiteDenseEncoder(nn.Module):
+    """
+    Same as DenseEncoder but uses LiteDenseBlock.
+    The 1x1 and small convs (dense_conv_1, dense_conv_2) stay standard Conv2d.
+    """
+    def __init__(self, cfg):
+        super().__init__()
+        # TODO copy DenseEncoder, swap DenseBlock for LiteDenseBlock
+        raise NotImplementedError
+
+    def forward(self, x):
+        raise NotImplementedError
+
+
+class LiteMagDecoder(nn.Module):
+    """Same as MagDecoder but uses LiteDenseBlock."""
+    def __init__(self, cfg):
+        super().__init__()
+        # TODO copy MagDecoder, swap DenseBlock for LiteDenseBlock
+        raise NotImplementedError
+
+    def forward(self, x):
+        raise NotImplementedError
+
+
+class LitePhaseDecoder(nn.Module):
+    """Same as PhaseDecoder but uses LiteDenseBlock."""
+    def __init__(self, cfg):
+        super().__init__()
+        # TODO copy PhaseDecoder, swap DenseBlock for LiteDenseBlock
+        raise NotImplementedError
+
+    def forward(self, x):
+        raise NotImplementedError
