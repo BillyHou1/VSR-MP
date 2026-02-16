@@ -99,7 +99,7 @@ LiteAVSEMamba/
 Read the SEMamba paper [1] first to understand the base architecture. If you're working on mamba_block.py, also read the Mamba paper [2]. Then open your assigned file and read the TODO comments at the top. Look at the existing SEMamba code like train.py and generator.py to see how things are structured, our code follows the same patterns.
 
 ```bash
-git clone -b SEMamba https://github.com/BillyHou1/dev_LiteAVSE.git
+git clone -b dev_LiteAVSE https://github.com/BillyHou1/LiteAVSE.git
 cd LiteAVSE
 pip install -r requirements.txt
 # install mamba-ssm separately
