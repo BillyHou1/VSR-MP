@@ -1,47 +1,80 @@
 # Fan
-# Generate JSON file lists for LRS2.
-# LRS2 has official split files (train.txt, val.txt, test.txt),
-# use those instead of splitting yourself.
-# Each entry is a .mp4 with both audio and video inside.
-# The dataloader extracts audio from the mp4 at load time.
-# Output: data/lrs_train.json, data/lrs_valid.json, data/lrs_test.json
-# Format: [{"video": "/abs/path/to/utterance.mp4"}, ...]
-# No separate audio key.
+# LRS2: use official train.txt, val.txt, test.txt to build json lists.
+# each line in txt is relative path to one .mp4 (audio inside mp4).
+# output: lrs_train.json, lrs_valid.json, lrs_test.json
+# format: [{"video": "abs_path"}, ...]
 
 import os
 import json
 import argparse
 
 
-def read_split_file(split_txt, lrs2_root):
-    """
-    Read an official LRS2 split file and resolve to absolute paths.
-
-    Args:
-        split_txt: str, path to split file (e.g. train.txt)
-        lrs2_root: str, root directory of LRS2
-    Returns:
-        list of {"video": "/abs/path/to/utterance.mp4"}
-    """
-    # TODO
-    raise NotImplementedError
+def read_split_file(txt_path, root):
+    # each line: relative path, maybe no .mp4 suffix
+    root = os.path.abspath(root)
+    if not os.path.isfile(txt_path):
+        return []
+    out = []
+    with open(txt_path, "r", encoding="utf-8-sig", errors="ignore") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            rel = line.replace("\\", "/").lstrip("/")
+            full = os.path.normpath(os.path.join(root, rel))
+            ext = os.path.splitext(full)[1].lower()
+            if ext not in (".mp4", ".mpg", ".avi"):
+                full = full + ".mp4"
+            out.append({"video": os.path.abspath(full)})
+    return out
 
 
 def save_json(data, path):
-    """Save a list to a JSON file."""
-    # TODO
-    raise NotImplementedError
+    dirpath = os.path.dirname(os.path.abspath(path))
+    if dirpath:
+        os.makedirs(dirpath, exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Generate LRS2 JSON lists')
-    parser.add_argument('--lrs2_root', required=True, help='root directory of LRS2')
-    parser.add_argument('--output_dir', default='data', help='output directory for JSON files')
+    parser = argparse.ArgumentParser(description="LRS2 json lists")
+    parser.add_argument("--lrs2_root", required=True, help="LRS2 root dir")
+    parser.add_argument("--output_dir", default="data", help="where to write json")
     args = parser.parse_args()
 
-    # TODO read split files, save JSONs, print counts
-    raise NotImplementedError
+    root = os.path.abspath(args.lrs2_root)
+    if not os.path.isdir(root):
+        print("Error: not a dir:", root)
+        return
+
+    os.makedirs(args.output_dir, exist_ok=True)
+    out_dir = os.path.abspath(args.output_dir)
+
+    # train.txt -> lrs_train.json, val.txt -> lrs_valid.json, test.txt -> lrs_test.json
+    splits = [
+        ("train", "train.txt", "lrs_train.json"),
+        ("valid", "val.txt", "lrs_valid.json"),
+        ("test", "test.txt", "lrs_test.json"),
+    ]
+    total = 0
+    for name, txt_name, json_name in splits:
+        txt_path = os.path.join(root, txt_name)
+        if not os.path.isfile(txt_path):
+            txt_path = os.path.join(root, "meta", txt_name)
+        if not os.path.isfile(txt_path):
+            print("warning: no", txt_name, "in", root)
+            lst = []
+        else:
+            lst = read_split_file(txt_path, root)
+        total += len(lst)
+        out_path = os.path.join(out_dir, json_name)
+        save_json(lst, out_path)
+        print(name, len(lst), "->", out_path)
+
+    if total == 0:
+        print("no entries. put train.txt/val.txt/test.txt in lrs2_root (or meta/), one path per line.")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
