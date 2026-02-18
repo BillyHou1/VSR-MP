@@ -2,7 +2,7 @@
 # Training script for LiteAVSEMamba, forward pass, loss, backprop, validate,
 # checkpoint.
 #
-# TODO implement the training loop
+# TODO implement the training loop test
 #
 # 6 losses, 5 active + 1 disabled: mag 0.9 | phase 0.3 | complex 0.1 |
 # consistency 0.1 | SI-SDR 0.3 | time 0.0. You still have to compute
