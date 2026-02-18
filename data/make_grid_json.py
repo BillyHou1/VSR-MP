@@ -65,9 +65,8 @@ def split_by_speaker(by_speaker, train_spk, valid_spk, test_spk):
 
 def main():
     parser = argparse.ArgumentParser(description="GRID json lists")
-    # TODO:default path for testing remove later
-    parser.add_argument("--grid_root", required=True, default=r"C:\Users\Y9000K\Desktop\GRID", help="GRID root")
-    parser.add_argument("--output_dir", required=True, default="data", help="output dir")
+    parser.add_argument("--grid_root", required=True, help="GRID root")
+    parser.add_argument("--output_dir", default="data", help="output dir")
     args = parser.parse_args()
 
     train_spk = [f"s{i}" for i in range(1, 29)]
