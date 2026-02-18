@@ -1,4 +1,4 @@
-# Zhenning work
+# Dominic
 # What this file does:
 # This is where the actual denoising happens. Mamba scans along time and
 # frequency to clean up the audio spectrogram. Think of it like an RNN that

@@ -1,4 +1,4 @@
-# Dominic part
+# Zhenning
 # Extracts visual features from video frames (lip region) for the audio model.
 # Two versions: EncoderA uses a pretrained 2D backbone for transfer learning,
 # EncoderB is a custom 3D CNN that trains from scratch.
