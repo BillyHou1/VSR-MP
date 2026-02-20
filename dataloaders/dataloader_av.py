@@ -31,8 +31,8 @@ import torch.nn.functional as F
 from models.stfts import mag_phase_stft
 
 def load_video_frames(video_path, start_sec, duration_sec, face_size=96, fps=25):
-    """Placeholder: video 部分不在当前工作范围，仅保证 evaluation 脚本可导入。"""
-    raise NotImplementedError("load_video_frames 未实现（video 非本模块范围）")
+    """Placeholder: video """
+    raise NotImplementedError("load_video_frames is not implemented")
 
 
 def load_json_file(path):
